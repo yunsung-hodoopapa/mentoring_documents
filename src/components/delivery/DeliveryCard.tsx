@@ -1,5 +1,3 @@
-import { DeliveryCompleteButton } from './DeliveryCompleteButton';
-import { PickupStartButton } from './PickupStartButton';
 import type { Delivery } from './types';
 
 const STATUS_LABEL: Record<Delivery['status'], string> = {
@@ -11,12 +9,18 @@ const STATUS_LABEL: Record<Delivery['status'], string> = {
 type DeliveryCardProps = {
   delivery: Delivery;
   isSelected: boolean;
+  processingDeliveryId: number | null;
   onSelect: (deliveryId: number) => void;
-  onDeliveryChanged: () => void;
+  onStartPickup: (delivery: Delivery) => void;
+  onCompleteDelivery: (delivery: Delivery) => void;
 };
 
 export function DeliveryCard(props: DeliveryCardProps) {
-  const { delivery, isSelected, onSelect, onDeliveryChanged } = props;
+  const { delivery, isSelected, processingDeliveryId, onSelect, onStartPickup, onCompleteDelivery } =
+    props;
+
+  const isProcessing = processingDeliveryId === delivery.id;
+  const isFlowBusy = processingDeliveryId !== null;
 
   return (
     <article className={isSelected ? 'delivery-card delivery-card-selected' : 'delivery-card'}>
@@ -35,10 +39,24 @@ export function DeliveryCard(props: DeliveryCardProps) {
       </button>
       <div className="delivery-card-actions">
         {delivery.status === 'ready' ? (
-          <PickupStartButton delivery={delivery} onPickupStart={onDeliveryChanged} />
+          <button
+            type="button"
+            className="delivery-button-primary"
+            disabled={isFlowBusy}
+            onClick={() => onStartPickup(delivery)}
+          >
+            {isProcessing ? '처리 중...' : '픽업 시작'}
+          </button>
         ) : null}
         {delivery.status === 'pickedUp' ? (
-          <DeliveryCompleteButton delivery={delivery} onSuccessComplete={onDeliveryChanged} />
+          <button
+            type="button"
+            className="delivery-button-primary"
+            disabled={isFlowBusy}
+            onClick={() => onCompleteDelivery(delivery)}
+          >
+            {isProcessing ? '처리 중...' : '배달 완료'}
+          </button>
         ) : null}
       </div>
     </article>

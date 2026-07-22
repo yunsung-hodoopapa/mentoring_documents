@@ -3,30 +3,34 @@ import type { ForwardedRef } from 'react';
 
 import { BottomSheet } from '../lib/BottomSheet';
 import type { BottomSheetRef } from '../lib/BottomSheet';
-import type { ModalRef } from '../types';
 
-type AlreadyDeliveredReasonSheetProps = {
-  onSubmit: (reason: string) => Promise<void> | void;
-  onClose: () => void;
+export type AlreadyDeliveredReasonOutcome =
+  | { type: 'submitted'; reason: string }
+  | { type: 'dismissed' };
+
+export type AlreadyDeliveredReasonSheetRef = {
+  open: () => Promise<AlreadyDeliveredReasonOutcome>;
 };
 
 export const AlreadyDeliveredReasonSheet = forwardRef(function AlreadyDeliveredReasonSheet(
-  props: AlreadyDeliveredReasonSheetProps,
-  ref: ForwardedRef<ModalRef>,
+  _props: object,
+  ref: ForwardedRef<AlreadyDeliveredReasonSheetRef>,
 ) {
-  const { onSubmit, onClose } = props;
-
   const bottomSheetRef = useRef<BottomSheetRef>(null);
-  const submittedReasonRef = useRef<string | null>(null);
+  const resolveOutcomeRef = useRef<((outcome: AlreadyDeliveredReasonOutcome) => void) | null>(
+    null,
+  );
+  const pendingOutcomeRef = useRef<AlreadyDeliveredReasonOutcome | null>(null);
   const [reason, setReason] = useState('');
 
   useImperativeHandle(ref, () => ({
-    open: () => {
-      submittedReasonRef.current = null;
-      setReason('');
-      bottomSheetRef.current?.show();
-    },
-    close: () => bottomSheetRef.current?.hide(),
+    open: () =>
+      new Promise<AlreadyDeliveredReasonOutcome>((resolve) => {
+        resolveOutcomeRef.current = resolve;
+        pendingOutcomeRef.current = null;
+        setReason('');
+        bottomSheetRef.current?.show();
+      }),
   }));
 
   const handleSubmitPress = () => {
@@ -35,20 +39,15 @@ export const AlreadyDeliveredReasonSheet = forwardRef(function AlreadyDeliveredR
       return;
     }
 
-    submittedReasonRef.current = reason.trim();
+    pendingOutcomeRef.current = { type: 'submitted', reason: reason.trim() };
     bottomSheetRef.current?.hide();
   };
 
   const handleHide = () => {
-    const submittedReason = submittedReasonRef.current;
-    submittedReasonRef.current = null;
-
-    if (submittedReason === null) {
-      onClose();
-      return;
-    }
-
-    void onSubmit(submittedReason);
+    const outcome = pendingOutcomeRef.current ?? { type: 'dismissed' as const };
+    pendingOutcomeRef.current = null;
+    resolveOutcomeRef.current?.(outcome);
+    resolveOutcomeRef.current = null;
   };
 
   return (

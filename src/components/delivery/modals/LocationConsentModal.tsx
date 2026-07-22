@@ -3,41 +3,40 @@ import type { ForwardedRef } from 'react';
 
 import { BottomSheet } from '../lib/BottomSheet';
 import type { BottomSheetRef } from '../lib/BottomSheet';
-import type { ModalRef } from '../types';
 
-type LocationConsentModalProps = {
-  onAgree: () => Promise<void> | void;
-  onAgreeDismissed: () => void;
+export type LocationConsentOutcome = 'agreed' | 'dismissed';
+
+export type LocationConsentModalRef = {
+  open: () => Promise<LocationConsentOutcome>;
 };
 
 export const LocationConsentModal = forwardRef(function LocationConsentModal(
-  props: LocationConsentModalProps,
-  ref: ForwardedRef<ModalRef>,
+  _props: object,
+  ref: ForwardedRef<LocationConsentModalRef>,
 ) {
-  const { onAgree, onAgreeDismissed } = props;
-
   const bottomSheetRef = useRef<BottomSheetRef>(null);
-  const hasAgreedRef = useRef(false);
+  const resolveOutcomeRef = useRef<((outcome: LocationConsentOutcome) => void) | null>(null);
+  const pendingOutcomeRef = useRef<LocationConsentOutcome | null>(null);
 
   useImperativeHandle(ref, () => ({
-    open: () => {
-      hasAgreedRef.current = false;
-      bottomSheetRef.current?.show();
-    },
-    close: () => bottomSheetRef.current?.hide(),
+    open: () =>
+      new Promise<LocationConsentOutcome>((resolve) => {
+        resolveOutcomeRef.current = resolve;
+        pendingOutcomeRef.current = null;
+        bottomSheetRef.current?.show();
+      }),
   }));
 
-  const handleAgreePress = async () => {
-    await onAgree();
-    hasAgreedRef.current = true;
+  const handleAgreePress = () => {
+    pendingOutcomeRef.current = 'agreed';
     bottomSheetRef.current?.hide();
   };
 
   const handleHide = () => {
-    if (hasAgreedRef.current) {
-      hasAgreedRef.current = false;
-      onAgreeDismissed();
-    }
+    const outcome = pendingOutcomeRef.current ?? 'dismissed';
+    pendingOutcomeRef.current = null;
+    resolveOutcomeRef.current?.(outcome);
+    resolveOutcomeRef.current = null;
   };
 
   return (

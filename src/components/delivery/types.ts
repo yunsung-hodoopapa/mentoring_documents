@@ -1,8 +1,3 @@
-export type ModalRef = {
-  open: () => void;
-  close: () => void;
-};
-
 export type DeliveryStatus = 'ready' | 'pickedUp' | 'delivered';
 
 export type DeliveryDropType = 'doorstep' | 'direct';

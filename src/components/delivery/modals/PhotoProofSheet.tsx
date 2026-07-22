@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import type { ForwardedRef } from 'react';
 
 import { BottomSheet } from '../lib/BottomSheet';
@@ -6,63 +6,57 @@ import type { BottomSheetRef } from '../lib/BottomSheet';
 import { checkAndRequestCameraPermission, takeProofPhoto } from '../lib/fakeCamera';
 import type { CapturedProofPhoto } from '../lib/fakeCamera';
 import { uploadProofPhoto } from '../lib/deliveryApi';
-import type { ModalRef } from '../types';
 
-type PhotoProofSheetBaseProps = {
-  onSubmit: (uploadedPath: string) => Promise<void>;
-  onClose: () => void;
+export type PhotoProofFlow = 'pickup' | 'complete';
+
+export type PhotoProofOutcome =
+  | { type: 'submitted'; uploadedPath: string }
+  | { type: 'alreadyDelivered' }
+  | { type: 'dismissed' };
+
+export type PhotoProofSheetRef = {
+  open: (flow: PhotoProofFlow) => Promise<PhotoProofOutcome>;
 };
 
-type PhotoProofSheetProps = PhotoProofSheetBaseProps &
-  ({ flow: 'pickup' } | { flow: 'complete'; onAlreadyDelivered: () => void });
-
-type PendingAction = 'submitted' | 'alreadyDelivered' | null;
-
 export const PhotoProofSheet = forwardRef(function PhotoProofSheet(
-  props: PhotoProofSheetProps,
-  ref: ForwardedRef<ModalRef>,
+  _props: object,
+  ref: ForwardedRef<PhotoProofSheetRef>,
 ) {
-  const { onSubmit, onClose, flow } = props;
-
   const bottomSheetRef = useRef<BottomSheetRef>(null);
-  const pendingActionRef = useRef<PendingAction>(null);
-  const isCameraOpeningRef = useRef(false);
-  const isSubmittingRef = useRef(false);
-  const sheetGenerationRef = useRef(0);
+  const resolveOutcomeRef = useRef<((outcome: PhotoProofOutcome) => void) | null>(null);
+  const pendingOutcomeRef = useRef<PhotoProofOutcome | null>(null);
+
+  const [flow, setFlow] = useState<PhotoProofFlow>('pickup');
   const [capturedPhoto, setCapturedPhoto] = useState<CapturedProofPhoto | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const openSheet = () => {
-    sheetGenerationRef.current += 1;
-    pendingActionRef.current = null;
-    isCameraOpeningRef.current = false;
-    isSubmittingRef.current = false;
-    setCapturedPhoto(null);
-    setIsSubmitting(false);
-    bottomSheetRef.current?.show();
-  };
-  const closeSheet = () => {
-    bottomSheetRef.current?.hide();
-  };
+  useImperativeHandle(ref, () => ({
+    open: (nextFlow) =>
+      new Promise<PhotoProofOutcome>((resolve) => {
+        resolveOutcomeRef.current = resolve;
+        pendingOutcomeRef.current = null;
+        setFlow(nextFlow);
+        setCapturedPhoto(null);
+        setIsCapturing(false);
+        setIsSubmitting(false);
+        bottomSheetRef.current?.show();
+      }),
+  }));
 
   const handleTakePhotoPress = async () => {
-    if (isCameraOpeningRef.current || isSubmittingRef.current) {
+    if (isCapturing || isSubmitting) {
       return;
     }
 
-    isCameraOpeningRef.current = true;
-    const sheetGeneration = sheetGenerationRef.current;
+    setIsCapturing(true);
     try {
       const hasPermission = await checkAndRequestCameraPermission();
-      if (!hasPermission || sheetGenerationRef.current !== sheetGeneration) {
+      if (!hasPermission) {
         return;
       }
 
       const result = await takeProofPhoto();
-      if (sheetGenerationRef.current !== sheetGeneration) {
-        return;
-      }
-
       if (result.status === 'captured') {
         setCapturedPhoto(result.photo);
         return;
@@ -70,77 +64,38 @@ export const PhotoProofSheet = forwardRef(function PhotoProofSheet(
 
       window.alert('카메라를 열지 못했습니다. 다시 시도해주세요.');
     } finally {
-      if (sheetGenerationRef.current === sheetGeneration) {
-        isCameraOpeningRef.current = false;
-      }
+      setIsCapturing(false);
     }
   };
 
   const handleSubmitPress = async () => {
-    if (!capturedPhoto || isSubmittingRef.current || pendingActionRef.current === 'submitted') {
+    if (!capturedPhoto || isSubmitting) {
       return;
     }
 
-    isSubmittingRef.current = true;
-    const sheetGeneration = sheetGenerationRef.current;
     setIsSubmitting(true);
     try {
       const { path } = await uploadProofPhoto(capturedPhoto.dataUrl);
-      if (sheetGenerationRef.current !== sheetGeneration) {
-        return;
-      }
-
-      pendingActionRef.current = 'submitted';
+      pendingOutcomeRef.current = { type: 'submitted', uploadedPath: path };
       bottomSheetRef.current?.hide();
-      await onSubmit(path);
     } catch {
-      if (sheetGenerationRef.current !== sheetGeneration) {
-        return;
-      }
-
       window.alert('사진 업로드에 실패했어요. 다시 제출해주세요.');
     } finally {
-      if (sheetGenerationRef.current === sheetGeneration) {
-        isSubmittingRef.current = false;
-        setIsSubmitting(false);
-      }
+      setIsSubmitting(false);
     }
   };
 
   const handleAlreadyDeliveredPress = () => {
-    pendingActionRef.current = 'alreadyDelivered';
+    pendingOutcomeRef.current = { type: 'alreadyDelivered' };
     bottomSheetRef.current?.hide();
   };
 
   const handleHide = () => {
-    const pendingAction = pendingActionRef.current;
-    pendingActionRef.current = null;
-
-    if (pendingAction === 'submitted') {
-      return;
-    }
-
-    sheetGenerationRef.current += 1;
-
-    if (pendingAction === 'alreadyDelivered' && props.flow === 'complete') {
-      props.onAlreadyDelivered();
-      return;
-    }
-
-    onClose();
+    const outcome = pendingOutcomeRef.current ?? { type: 'dismissed' as const };
+    pendingOutcomeRef.current = null;
+    resolveOutcomeRef.current?.(outcome);
+    resolveOutcomeRef.current = null;
   };
-
-  useImperativeHandle(ref, () => ({
-    open: openSheet,
-    close: closeSheet,
-  }));
-
-  useEffect(
-    () => () => {
-      sheetGenerationRef.current += 1;
-    },
-    [],
-  );
 
   const title =
     flow === 'pickup'
@@ -160,7 +115,7 @@ export const PhotoProofSheet = forwardRef(function PhotoProofSheet(
           className="delivery-sheet-close"
           aria-label="안내 닫기"
           disabled={isSubmitting}
-          onClick={closeSheet}
+          onClick={() => bottomSheetRef.current?.hide()}
         >
           ×
         </button>
@@ -199,12 +154,16 @@ export const PhotoProofSheet = forwardRef(function PhotoProofSheet(
           ) : (
             <>
               <button type="button" className="delivery-button-primary" onClick={handleTakePhotoPress}>
-                촬영하기
+                {isCapturing ? '촬영 중...' : '촬영하기'}
               </button>
               <button
                 type="button"
                 className="delivery-button-secondary"
-                onClick={flow === 'complete' ? handleAlreadyDeliveredPress : closeSheet}
+                onClick={
+                  flow === 'complete'
+                    ? handleAlreadyDeliveredPress
+                    : () => bottomSheetRef.current?.hide()
+                }
               >
                 {flow === 'complete' ? '이미 전달해서 촬영할 수 없어요' : '닫기'}
               </button>

@@ -3,45 +3,42 @@ import type { ForwardedRef } from 'react';
 
 import { BottomSheet } from '../lib/BottomSheet';
 import type { BottomSheetRef } from '../lib/BottomSheet';
-import type { ModalRef } from '../types';
 
-type LateReasonSheetProps = {
-  onSelect: (isLateNegotiated: boolean) => Promise<void> | void;
-  onClose: () => void;
+export type LateReasonOutcome =
+  | { type: 'selected'; isLateNegotiated: boolean }
+  | { type: 'dismissed' };
+
+export type LateReasonSheetRef = {
+  open: () => Promise<LateReasonOutcome>;
 };
 
 export const LateReasonSheet = forwardRef(function LateReasonSheet(
-  props: LateReasonSheetProps,
-  ref: ForwardedRef<ModalRef>,
+  _props: object,
+  ref: ForwardedRef<LateReasonSheetRef>,
 ) {
-  const { onSelect, onClose } = props;
-
   const bottomSheetRef = useRef<BottomSheetRef>(null);
-  const pendingSelectionRef = useRef<boolean | null>(null);
+  const resolveOutcomeRef = useRef<((outcome: LateReasonOutcome) => void) | null>(null);
+  const pendingOutcomeRef = useRef<LateReasonOutcome | null>(null);
 
   useImperativeHandle(ref, () => ({
-    open: () => {
-      pendingSelectionRef.current = null;
-      bottomSheetRef.current?.show();
-    },
-    close: () => bottomSheetRef.current?.hide(),
+    open: () =>
+      new Promise<LateReasonOutcome>((resolve) => {
+        resolveOutcomeRef.current = resolve;
+        pendingOutcomeRef.current = null;
+        bottomSheetRef.current?.show();
+      }),
   }));
 
   const handleSelect = (isLateNegotiated: boolean) => {
-    pendingSelectionRef.current = isLateNegotiated;
+    pendingOutcomeRef.current = { type: 'selected', isLateNegotiated };
     bottomSheetRef.current?.hide();
   };
 
   const handleHide = () => {
-    const pendingSelection = pendingSelectionRef.current;
-    pendingSelectionRef.current = null;
-
-    if (pendingSelection === null) {
-      onClose();
-      return;
-    }
-
-    void onSelect(pendingSelection);
+    const outcome = pendingOutcomeRef.current ?? { type: 'dismissed' as const };
+    pendingOutcomeRef.current = null;
+    resolveOutcomeRef.current?.(outcome);
+    resolveOutcomeRef.current = null;
   };
 
   return (

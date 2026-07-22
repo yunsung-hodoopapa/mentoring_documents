@@ -1,18 +1,18 @@
-import { useState } from 'react';
-
-import { DeliveryCompleteButton } from './DeliveryCompleteButton';
-import { PickupStartButton } from './PickupStartButton';
 import type { Delivery } from './types';
 
 type DeliveryDetailPanelProps = {
   delivery: Delivery;
+  processingDeliveryId: number | null;
   onClose: () => void;
-  onDeliveryChanged: () => void;
+  onStartPickup: (delivery: Delivery) => void;
+  onCompleteDelivery: (delivery: Delivery) => void;
 };
 
 export function DeliveryDetailPanel(props: DeliveryDetailPanelProps) {
-  const { delivery, onClose, onDeliveryChanged } = props;
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { delivery, processingDeliveryId, onClose, onStartPickup, onCompleteDelivery } = props;
+
+  const isProcessing = processingDeliveryId === delivery.id;
+  const isFlowBusy = processingDeliveryId !== null;
 
   return (
     <aside className="delivery-detail-panel">
@@ -49,14 +49,24 @@ export function DeliveryDetailPanel(props: DeliveryDetailPanelProps) {
       {isProcessing ? <p className="delivery-detail-processing">처리 중...</p> : null}
       <div className="delivery-detail-actions">
         {delivery.status === 'ready' ? (
-          <PickupStartButton delivery={delivery} onPickupStart={onDeliveryChanged} />
+          <button
+            type="button"
+            className="delivery-button-primary"
+            disabled={isFlowBusy}
+            onClick={() => onStartPickup(delivery)}
+          >
+            픽업 시작
+          </button>
         ) : null}
         {delivery.status === 'pickedUp' ? (
-          <DeliveryCompleteButton
-            delivery={delivery}
-            onSuccessComplete={onDeliveryChanged}
-            onLoadingChange={setIsProcessing}
-          />
+          <button
+            type="button"
+            className="delivery-button-primary"
+            disabled={isFlowBusy}
+            onClick={() => onCompleteDelivery(delivery)}
+          >
+            배달 완료
+          </button>
         ) : null}
         {delivery.status === 'delivered' ? <p>배달이 완료된 건이에요.</p> : null}
       </div>
