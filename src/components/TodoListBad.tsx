@@ -1,166 +1,104 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
+import { FilterType, Todo, useTodos, useTodoStorage, useNotification } from '../hooks';
+import { getFilteredAndSortedTodos, calculateTodoStats } from '../utils';
 
-let todoIdCounter = 0;
-let lastSavedTodos: Todo[] = [];
-
-interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
-  priority: 'high' | 'medium' | 'low';
-  createdAt: Date;
-}
-
-const TodoListBad: React.FC = () => {
-  const [todos, setTodos] = useState<Todo[]>([]);
+const TodoList: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [stats, setStats] = useState({ total: 0, completed: 0, pending: 0 });
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
 
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.borderColor = inputValue.length > 0 ? 'green' : 'red';
-    }
-  }, [inputValue]);
+  // 커스텀 훅들 사용
+  const { todos, setTodos, addTodo, toggleTodo, deleteTodo } = useTodos();
+  const { isLoading } = useTodoStorage(todos, setTodos);
+  const { notification, error, inputError, showNotification, showError, clearError } =
+    useNotification();
 
-  useEffect(() => {
-    const total = todos.length;
-    const completed = todos.filter((todo) => todo.completed).length;
-    const pending = total - completed;
-    setStats({ total, completed, pending });
-  }, [todos]);
+  // utils를 사용한 계산들
+  const filteredAndSortedTodos = useMemo(
+    () => getFilteredAndSortedTodos(todos, filter),
+    [todos, filter],
+  );
 
-  useEffect(() => {
-    localStorage.setItem('todos', JSON.stringify(todos));
-    lastSavedTodos = todos;
-  }, [todos]);
+  const stats = useMemo(() => calculateTodoStats(todos), [todos]);
 
-  useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const savedTodos = localStorage.getItem('todos');
-      if (savedTodos) {
-        setTodos(JSON.parse(savedTodos));
-      }
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+  // 할일 추가 핸들러
+  const handleAddTodo = () => {
+    const result = addTodo(inputValue);
 
-  const generateTodoId = () => {
-    todoIdCounter += 1;
-    return todoIdCounter;
-  };
-
-  const addTodo = () => {
-    if (!inputValue.trim()) {
-      setError('할일을 입력해주세요!');
-      if (inputRef.current) {
-        inputRef.current.focus();
-        inputRef.current.style.backgroundColor = '#ffebee';
-        setTimeout(() => {
-          if (inputRef.current) {
-            inputRef.current.style.backgroundColor = '';
-          }
-        }, 2000);
-      }
+    if (!result.isValid) {
+      showError(result.errorMessage);
       return;
     }
 
-    if (inputValue.length > 100) {
-      setError('할일은 100자 이하로 입력해주세요!');
-      return;
-    }
-
-    setError('');
-
-    const newTodo: Todo = {
-      id: generateTodoId(),
-      text: inputValue,
-      completed: false,
-      priority: inputValue.includes('!') ? 'high' : inputValue.includes('?') ? 'medium' : 'low',
-      createdAt: new Date(),
-    };
-
-    todos.push(newTodo);
-    setTodos(todos);
+    clearError();
     setInputValue('');
-
-    alert(`새로운 할일이 추가되었습니다: ${newTodo.text}`);
+    showNotification(`새로운 할일이 추가되었습니다: ${inputValue.trim()}`);
   };
 
-  const toggleTodo = (todo: Todo) => {
-    todo.completed = !todo.completed;
-    setTodos([...todos]);
-  };
-
-  const deleteTodo = (id: number) => {
-    const todoToDelete = todos.find((todo) => todo.id === id);
-    if (todoToDelete && todoToDelete.completed) {
-      if (confirm('완료된 할일을 삭제하시겠습니까?')) {
-        const index = todos.findIndex((todo) => todo.id === id);
-        todos.splice(index, 1);
-        setTodos(todos);
-        alert('할일이 삭제되었습니다!');
-      }
-    } else {
-      const index = todos.findIndex((todo) => todo.id === id);
-      todos.splice(index, 1);
-      setTodos(todos);
+  // 할일 삭제 핸들러
+  const handleDeleteTodo = (id: number) => {
+    const success = deleteTodo(id);
+    if (success) {
+      showNotification('할일이 삭제되었습니다!');
     }
-  };
-
-  const getFilteredTodos = () => {
-    let filtered = todos;
-
-    if (filter === 'completed') {
-      filtered = todos.filter((todo) => todo.completed);
-    } else if (filter === 'pending') {
-      filtered = todos.filter((todo) => !todo.completed);
-    }
-
-    return filtered.sort((a, b) => {
-      if (a.priority === 'high' && b.priority !== 'high') return -1;
-      if (a.priority !== 'high' && b.priority === 'high') return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      addTodo();
+      handleAddTodo();
     }
   };
 
   if (isLoading) {
-    return <div>로딩 중...</div>;
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '200px',
+          fontSize: '18px',
+        }}
+      >
+        로딩 중...
+      </div>
+    );
   }
-
-  const filteredTodos = getFilteredTodos();
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>할일 목록 (안티패턴 버전)</h1>
+      <h1>할일 목록 (함수형 프로그래밍 버전)</h1>
+
+      {/* 알림 메시지 */}
+      {notification && (
+        <div
+          style={{
+            marginBottom: '10px',
+            padding: '10px',
+            backgroundColor: '#d4edda',
+            color: '#155724',
+            border: '1px solid #c3e6cb',
+            borderRadius: '4px',
+          }}
+        >
+          {notification}
+        </div>
+      )}
 
       <div
         style={{
           marginBottom: '20px',
           padding: '10px',
-          backgroundColor: error ? '#ffebee' : '#f5f5f5',
-          border: error ? '2px solid red' : '1px solid #ddd',
+          backgroundColor: error || inputError ? '#ffebee' : '#f5f5f5',
+          border: error || inputError ? '2px solid red' : '1px solid #ddd',
+          borderRadius: '4px',
         }}
       >
         <input
-          ref={inputRef}
           type="text"
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
-            if (e.target.value.length > 50) {
-              console.warn('긴 할일입니다!');
-            }
+            // 긴 입력값에 대한 경고를 콘솔 대신 상태로 관리할 수 있음
           }}
           onKeyPress={handleKeyPress}
           placeholder="할일을 입력하세요 (! = 높은 우선순위, ? = 중간 우선순위)"
@@ -168,15 +106,20 @@ const TodoListBad: React.FC = () => {
             width: '70%',
             padding: '8px',
             marginRight: '10px',
+            borderColor: inputValue.length > 0 ? '#4caf50' : '#ddd',
+            borderWidth: '2px',
+            borderStyle: 'solid',
+            backgroundColor: inputError ? '#ffebee' : 'white',
           }}
         />
         <button
-          onClick={addTodo}
+          onClick={handleAddTodo}
           style={{
             padding: '8px 16px',
             backgroundColor: inputValue.trim() ? '#4caf50' : '#ccc',
             color: 'white',
             border: 'none',
+            borderRadius: '4px',
             cursor: inputValue.trim() ? 'pointer' : 'not-allowed',
           }}
         >
@@ -187,7 +130,7 @@ const TodoListBad: React.FC = () => {
       {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
 
       <div style={{ marginBottom: '20px' }}>
-        {['all', 'pending', 'completed'].map((filterType) => (
+        {(['all', 'pending', 'completed'] as FilterType[]).map((filterType) => (
           <button
             key={filterType}
             onClick={() => setFilter(filterType)}
@@ -197,6 +140,8 @@ const TodoListBad: React.FC = () => {
               backgroundColor: filter === filterType ? '#2196f3' : '#f0f0f0',
               color: filter === filterType ? 'white' : 'black',
               border: '1px solid #ddd',
+              borderRadius: '4px',
+              cursor: 'pointer',
             }}
           >
             {filterType === 'all' ? '전체' : filterType === 'pending' ? '미완료' : '완료'}
@@ -217,7 +162,7 @@ const TodoListBad: React.FC = () => {
       </div>
 
       <div>
-        {filteredTodos.length === 0 ? (
+        {filteredAndSortedTodos.length === 0 ? (
           <p style={{ textAlign: 'center', color: '#666' }}>
             {filter === 'all'
               ? '할일이 없습니다.'
@@ -226,7 +171,7 @@ const TodoListBad: React.FC = () => {
                 : '완료된 할일이 없습니다.'}
           </p>
         ) : (
-          filteredTodos.map((todo) => (
+          filteredAndSortedTodos.map((todo: Todo) => (
             <div
               key={todo.id}
               style={{
@@ -248,7 +193,7 @@ const TodoListBad: React.FC = () => {
               <input
                 type="checkbox"
                 checked={todo.completed}
-                onChange={() => toggleTodo(todo)}
+                onChange={() => toggleTodo(todo.id)}
                 style={{ marginRight: '10px' }}
               />
               <span
@@ -270,7 +215,7 @@ const TodoListBad: React.FC = () => {
                 </small>
               </span>
               <button
-                onClick={() => deleteTodo(todo.id)}
+                onClick={() => handleDeleteTodo(todo.id)}
                 style={{
                   marginLeft: '10px',
                   padding: '5px 10px',
@@ -299,11 +244,13 @@ const TodoListBad: React.FC = () => {
       >
         <strong>디버그 정보:</strong>
         <br />
-        현재 ID 카운터: {todoIdCounter}
+        전체 할일: {stats.total}개
         <br />
-        마지막 저장된 할일 수: {lastSavedTodos.length}
+        완료: {stats.completed}개, 미완료: {stats.pending}개
         <br />
         현재 필터: {filter}
+        <br />
+        필터된 할일: {filteredAndSortedTodos.length}개
         <br />
         입력값 길이: {inputValue.length}
       </div>
@@ -311,4 +258,4 @@ const TodoListBad: React.FC = () => {
   );
 };
 
-export default TodoListBad;
+export default TodoList;
