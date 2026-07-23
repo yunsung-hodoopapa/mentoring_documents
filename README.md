@@ -15,12 +15,13 @@ npm run dev
 
 | 단계 | 과제 | 핵심 주제 |
 | --- | --- | --- |
+| 0 | [환경과 제출 연습](docs/assignments/step-00-environment.md) | 커밋 게이트 · 셀프 리뷰 규칙 |
 | 1 | [React 함수형 기초](docs/assignments/step-01-functional-basics.md) | 순수 함수 · 불변성 · 파생값 |
 | 2 | [Todo 리스트 리팩토링](docs/assignments/step-02-todo-refactoring.md) | useEffect 정당성 · 상태 3분할 |
 | 3 | [로그인 모달](docs/assignments/step-03-login-modal.md) | 관심사 분리 · 훅 추출 · service |
 | 4 | [갓 컴포넌트가 된 버튼](docs/assignments/step-04-god-button.md) | 흐름 소유권 · 모달 결과 채널 · 화면 위계 |
 
-순서대로 진행하는 것을 권장합니다. 1단계의 "파생값은 계산한다"가 2단계의 effect 심사로, 2단계의 상태 구분이 3단계의 관심사 분리로, 3단계의 훅 추출이 4단계의 흐름 소유권으로 이어집니다.
+순서대로 진행하는 것을 권장합니다. 0단계에서 세운 커밋 게이트와 셀프 리뷰 규칙 위에서, 1단계의 "파생값은 계산한다"가 2단계의 effect 심사로, 2단계의 상태 구분이 3단계의 관심사 분리로, 3단계의 훅 추출이 4단계의 흐름 소유권으로 이어집니다.
 
 ## 제출
 

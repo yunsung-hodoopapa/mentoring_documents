@@ -19,6 +19,19 @@
 
 `lib/` 폴더와 `DevToolbar.tsx`, `src/mocks/handlers.ts`는 실습 인프라라서 수정 대상이 아닙니다.
 
+## 시작 전에: 명령형 모달이란
+
+이 실습의 모달들은 선언형(`isOpen` prop으로 여닫기)이 아니라 명령형입니다. 부모가 ref로 `open()`을 직접 호출합니다.
+
+```tsx
+const sheetRef = useRef<ModalRef>(null);
+sheetRef.current?.open();
+```
+
+모달 쪽은 `useImperativeHandle`로 ref에 열고 닫는 함수를 노출합니다. 이 패턴이 처음이라면 `lib/BottomSheet.tsx`(60줄, 수정 대상 아님)를 먼저 읽으세요. show/hide와 "어떤 경로로든 닫히면 onHide가 한 번 호출된다"는 계약만 이해하면 됩니다.
+
+이벤트가 일어난 자리에서 여는 것 자체는 자연스러운 방향입니다. 문제는 이 전환이 절반에서 멈췄다는 것이고, 그게 이 실습의 주제입니다.
+
 ## 이번 과제
 
 | # | 미션 | 완료 기준 |
@@ -116,7 +129,31 @@ type PhotoProofSheetRef = {
 };
 ```
 
-시트 내부는 resolve 함수를 ref에 보관했다가, 닫힐 때 대기 중인 결과(없으면 `dismissed`)로 resolve하는 구조가 됩니다. 버튼 쪽에서는 422를 받은 자리에서 결과를 기다리면 되고, 모달이 이어지는 흐름이 순차 `await` 분기로 읽히게 됩니다.
+시트 내부는 resolve 함수를 ref에 보관했다가, 닫힐 때 대기 중인 결과(없으면 `dismissed`)로 resolve하는 구조가 됩니다. 뼈대는 이렇습니다.
+
+```typescript
+const resolveOutcomeRef = useRef<((outcome: PhotoProofOutcome) => void) | null>(null);
+const pendingOutcomeRef = useRef<PhotoProofOutcome | null>(null);
+
+const open = () =>
+  new Promise<PhotoProofOutcome>((resolve) => {
+    resolveOutcomeRef.current = resolve;
+    pendingOutcomeRef.current = null;
+    bottomSheetRef.current?.show();
+  });
+
+// 제출 성공 시: pendingOutcomeRef.current = { type: 'submitted', uploadedPath }; hide();
+// "이미 전달" 버튼: pendingOutcomeRef.current = { type: 'alreadyDelivered' }; hide();
+
+const handleHide = () => {
+  const outcome = pendingOutcomeRef.current ?? { type: 'dismissed' as const };
+  pendingOutcomeRef.current = null;
+  resolveOutcomeRef.current?.(outcome);
+  resolveOutcomeRef.current = null;
+};
+```
+
+버튼 쪽에서는 422를 받은 자리에서 결과를 기다리면 되고, 모달이 이어지는 흐름이 순차 `await` 분기로 읽히게 됩니다.
 
 ```typescript
 if (attempt.proofPhotoPath === undefined && isLocationVerificationFailedError(error)) {
