@@ -1,40 +1,43 @@
 import { useState } from 'react';
 import { BackofficeLoginModal } from './components/BackofficeLogin/BackofficeLoginModal';
 import { DeliveryListScreen } from './components/delivery/DeliveryListScreen';
+import SimpleTodoBad from './components/SimpleTodoBad';
+import TodoListBad from './components/TodoListBad';
 import './App.css';
 
-type Exercise = 'delivery' | 'backoffice-login';
+const EXERCISES = [
+  { key: 'step-01', label: '1단계 함수형 기초' },
+  { key: 'step-02', label: '2단계 Todo 리팩토링' },
+  { key: 'step-03', label: '3단계 로그인 모달' },
+  { key: 'step-04', label: '4단계 배달 관리' },
+] as const;
+
+type ExerciseKey = (typeof EXERCISES)[number]['key'];
 
 function App() {
-  const [exercise, setExercise] = useState<Exercise>('delivery');
+  const [exercise, setExercise] = useState<ExerciseKey>('step-01');
 
   return (
     <div className="App">
       <nav className="exercise-tabs">
-        <button
-          type="button"
-          className={exercise === 'delivery' ? 'exercise-tab exercise-tab-active' : 'exercise-tab'}
-          onClick={() => setExercise('delivery')}
-        >
-          배달 관리 실습
-        </button>
-        <button
-          type="button"
-          className={
-            exercise === 'backoffice-login' ? 'exercise-tab exercise-tab-active' : 'exercise-tab'
-          }
-          onClick={() => setExercise('backoffice-login')}
-        >
-          백오피스 로그인 실습
-        </button>
+        {EXERCISES.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            className={exercise === key ? 'exercise-tab exercise-tab-active' : 'exercise-tab'}
+            onClick={() => setExercise(key)}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
 
-      {exercise === 'delivery' ? (
-        <DeliveryListScreen />
-      ) : (
+      {exercise === 'step-01' ? <SimpleTodoBad /> : null}
+      {exercise === 'step-02' ? <TodoListBad /> : null}
+      {exercise === 'step-03' ? (
         <div className="container">
-          <h1>멘토링 리팩토링 프로젝트</h1>
-          <p>백오피스 로그인 모달 컴포넌트 리팩토링 연습</p>
+          <h1>백오피스 로그인</h1>
+          <p>관심사 분리와 훅 추출 실습 (docs/assignments/step-03-login-modal.md)</p>
 
           <div className="test-info">
             <h3>테스트 계정</h3>
@@ -50,7 +53,8 @@ function App() {
             <button className="login-trigger-btn">백오피스 로그인</button>
           </BackofficeLoginModal>
         </div>
-      )}
+      ) : null}
+      {exercise === 'step-04' ? <DeliveryListScreen /> : null}
     </div>
   );
 }

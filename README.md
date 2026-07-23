@@ -1,158 +1,55 @@
 # 멘토링 리팩토링 프로젝트
 
-이 프로젝트는 멘티들을 위한 React 컴포넌트 리팩토링 연습용 저장소입니다.
+React 리팩토링 멘토링 과제 레포입니다. 과제는 단계별로 빌드업됩니다 — 앞 단계에서 익힌 원칙이 다음 단계의 기반이 됩니다.
 
-## 프로젝트 구조
-
-```
-src/
-├── components/
-│   ├── BackofficeLogin/
-│   │   └── BackofficeLoginModal.tsx    # 리팩토링 대상 컴포넌트
-│   ├── TodoListBad.tsx                 # 안티패턴 예제 (중급자용)
-│   ├── TodoList.tsx                    # 함수형 프로그래밍 적용 예제 (중급자용)
-│   ├── SimpleTodoBad.tsx               # 안티패턴 예제 (초급자용)
-│   ├── SimpleTodoGood.tsx              # 함수형 프로그래밍 적용 예제 (초급자용)
-│   └── ui/                             # shadcn/ui 컴포넌트들
-├── hooks/
-│   └── useLocalStorage.ts              # 로컬스토리지 커스텀 훅
-├── lib/
-│   ├── apiUtils.ts                     # API 유틸리티 함수들
-│   └── utils.ts                        # 공통 유틸리티 함수들
-└── documents/                          # 멘토링 문서들
-    ├── functional-programming-guide.md
-    ├── react-functional-programming-exercise.md     # 중급자용 실습 가이드
-    ├── beginner-functional-programming-exercise.md  # 초급자용 실습 가이드
-    ├── git-collaboration-commands.md
-    ├── github-desktop-branch-guide.md
-    ├── github-flow-guide.md
-    └── prettier-eslint-setup.md
-```
-
-## 개발 환경 설정
-
-### 1. 의존성 설치
+## 시작하기
 
 ```bash
 npm install
-```
-
-### 2. 개발 서버 실행
-
-#### 목(Mock) API 사용 (기본값)
-
-```bash
 npm run dev
-# 또는 명시적으로
-npm run dev:mock
 ```
 
-#### 실제 API 사용
+> React 19 + Vite + TypeScript + MSW 기반입니다. 앱을 열면 단계별 실습 탭이 있습니다.
 
-```bash
-npm run dev:real
-```
+## 단계별 과제
 
-#### 환경변수 직접 설정
+| 단계 | 과제 | 핵심 주제 |
+| --- | --- | --- |
+| 1 | [React 함수형 기초](docs/assignments/step-01-functional-basics.md) | 순수 함수 · 불변성 · 파생값 |
+| 2 | [Todo 리스트 리팩토링](docs/assignments/step-02-todo-refactoring.md) | useEffect 정당성 · 상태 3분할 |
+| 3 | [로그인 모달](docs/assignments/step-03-login-modal.md) | 관심사 분리 · 훅 추출 · service |
+| 4 | [갓 컴포넌트가 된 버튼](docs/assignments/step-04-god-button.md) | 흐름 소유권 · 모달 결과 채널 · 화면 위계 |
 
-```bash
-# .env.local 파일 생성
-VITE_ENABLE_MSW=true
-VITE_API_BASE_URL=https://your-api-server.com
-```
+순서대로 진행하는 것을 권장합니다. 1단계의 "파생값은 계산한다"가 2단계의 effect 심사로, 2단계의 상태 구분이 3단계의 관심사 분리로, 3단계의 훅 추출이 4단계의 흐름 소유권으로 이어집니다.
 
-### 3. 린트 검사
+## 제출
 
-```bash
-npm run lint
-```
+1. 이 레포를 포크한다.
+2. 포크에서 작업 브랜치를 만든다 (예: `feat/step-01`).
+3. 과제를 진행하고 본인 포크에 커밋·푸시한다.
+4. 메인 레포로 PR을 연다 (base: 메인 레포의 `main` ← compare: 본인 포크의 작업 브랜치). 각 과제 가이드가 요구하는 서술(문제점 표, 분리 근거 등)을 PR 본문에 채운다.
+5. 멘토 리뷰와 다음 세션 구두 방어로 이어진다.
 
-### 4. 코드 포맷팅
+## 새 과제 받기
 
-```bash
-npm run format
-```
+새 과제나 수정 사항은 이 메인 레포에 업데이트됩니다. 본인 포크의 `main`을 이 레포(upstream)와 동기화해 받으세요.
 
-## 리팩토링 실습
+- 간단히: 포크한 GitHub 레포 페이지의 Sync fork 버튼.
+- CLI: `git remote add upstream https://github.com/yunsung-hodoopapa/mentoring_documents.git` 등록 후 `git fetch upstream && git switch main && git merge upstream/main`.
 
-### 1. 백오피스 로그인 모달 리팩토링
+## 참고 가이드
 
-`BackofficeLoginModal.tsx` 컴포넌트를 다음과 같은 관점에서 리팩토링해보세요:
+- [Prettier + ESLint 세팅](docs/guides/prettier-eslint-setup.md)
+- [GitHub Flow](docs/guides/github-flow-guide.md)
+- [GitHub Desktop 브랜치 관리](docs/guides/github-desktop-branch-guide.md)
+- [Git 협업 명령어](docs/guides/git-collaboration-commands.md)
 
-1. **컴포넌트 분리**: 단일 책임 원칙에 따라 컴포넌트를 작은 단위로 분리
-2. **커스텀 훅 추출**: 로직을 재사용 가능한 커스텀 훅으로 분리
-3. **타입 안전성 개선**: TypeScript 타입 정의 강화
-4. **에러 처리 개선**: 사용자 친화적인 에러 처리 로직 구현
-5. **접근성 개선**: 웹 접근성 가이드라인 준수
-6. **성능 최적화**: 불필요한 리렌더링 방지
+## 테스트 계정 (3단계 로그인 모달)
 
-### 2. 함수형 프로그래밍 실습
+MSW 목 API가 응답합니다.
 
-React에서 함수형 프로그래밍 원칙을 적용하는 실습입니다. **레벨별로 선택**하여 학습하세요:
-
-#### 🟢 초급자용 (추천: React 입문자)
-
-- **실습 파일**: `src/components/SimpleTodoBad.tsx` (약 120줄)
-- **목표 파일**: `src/components/SimpleTodoGood.tsx` (올바른 구현)
-- **가이드 문서**: `documents/beginner-functional-programming-exercise.md`
-
-**주요 학습 목표:**
-
-1. **순수 함수 이해**: 전역 변수 없이 예측 가능한 함수 작성
-2. **불변성 기초**: 배열과 객체를 직접 수정하지 않기
-3. **React 상태 관리**: 올바른 상태 업데이트 방법
-4. **기본 성능 최적화**: `useMemo` 활용
-
-**실습 방법:**
-
-1. "초급자 실습 (안티패턴)" 탭에서 6가지 문제점 확인
-2. 가이드 문서를 보며 단계별로 수정
-3. "초급자 실습 (해답)" 탭에서 올바른 구현 비교
-
-#### 🟡 중급자용 (React 경험자)
-
-- **실습 파일**: `src/components/TodoListBad.tsx` (약 330줄)
-- **목표 파일**: `src/components/TodoList.tsx` (올바른 구현)
-- **가이드 문서**: `documents/react-functional-programming-exercise.md`
-
-**주요 학습 목표:**
-
-1. **고급 순수 함수**: 복잡한 로직의 함수형 분리
-2. **컴포넌트 분리**: 단일 책임 원칙에 따른 작은 컴포넌트들
-3. **성능 최적화**: `useMemo`, `useCallback` 활용
-4. **커스텀 훅**: 로직 재사용을 위한 훅 분리
-5. **복잡한 상태 관리**: 여러 상태의 조합과 최적화
-
-**실습 방법:**
-
-1. "할일 목록 (안티패턴)" 탭에서 10가지 안티패턴 확인
-2. 가이드 문서를 참조하여 단계별 리팩토링
-3. "할일 목록 (함수형)" 탭에서 올바른 구현 비교
-
-## 환경변수 설정
-
-프로젝트에서 사용하는 환경변수들:
-
-| 환경변수            | 기본값                        | 설명                                         |
-| ------------------- | ----------------------------- | -------------------------------------------- |
-| `VITE_ENABLE_MSW`   | `true` (기본 활성화)          | MSW 활성화 여부 (`false`로 설정 시 비활성화) |
-| `VITE_API_BASE_URL` | `https://test.hodong-erp.com` | 실제 API 서버 URL                            |
-
-## 테스트 계정
-
-MSW(Mock Service Worker)를 사용한 테스트 API가 설정되어 있습니다. 다음 계정으로 로그인을 테스트할 수 있습니다:
-
-| 이메일             | 비밀번호      | 역할          | 설명             |
-| ------------------ | ------------- | ------------- | ---------------- |
-| `admin@test.com`   | `password123` | admin, user   | 관리자 계정      |
-| `manager@test.com` | `password123` | manager, user | 매니저 계정      |
-| `user@test.com`    | `password123` | user          | 일반 사용자 계정 |
-
-## 기술 스택
-
-- **React 19** + **TypeScript**
-- **Vite** (빌드 도구)
-- **Radix UI** (접근성 중심 UI 라이브러리)
-- **Lucide React** (아이콘)
-- **MSW** (Mock Service Worker - API 모킹)
-- **ESLint** + **Prettier** (코드 품질 관리)
+| 이메일 | 비밀번호 | 역할 |
+| --- | --- | --- |
+| `admin@test.com` | `password123` | admin, user |
+| `manager@test.com` | `password123` | manager, user |
+| `user@test.com` | `password123` | user |
