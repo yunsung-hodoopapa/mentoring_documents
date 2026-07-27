@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BackofficeLoginModal } from './components/BackofficeLogin/BackofficeLoginModal';
 import { DeliveryListScreen } from './components/delivery/DeliveryListScreen';
+import { RiderAppScreen } from './components/entry/RiderAppScreen';
 import SimpleTodoBad from './components/SimpleTodoBad';
 import TodoListBad from './components/TodoListBad';
 import './App.css';
@@ -10,6 +11,7 @@ const EXERCISES = [
   { key: 'step-02', label: '2단계 Todo 리팩토링' },
   { key: 'step-03', label: '3단계 로그인 모달' },
   { key: 'step-04', label: '4단계 배달 관리' },
+  { key: 'step-05', label: '5단계 진입 게이트' },
 ] as const;
 
 type ExerciseKey = (typeof EXERCISES)[number]['key'];
@@ -55,6 +57,7 @@ function App() {
         </div>
       ) : null}
       {exercise === 'step-04' ? <DeliveryListScreen /> : null}
+      {exercise === 'step-05' ? <RiderAppScreen /> : null}
     </div>
   );
 }

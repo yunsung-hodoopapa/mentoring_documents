@@ -144,6 +144,63 @@ const deliveryHandlers = [
   }),
 ];
 
+/**
+ * 5단계 실습(라이더 앱 진입 게이트)용 핸들러.
+ *
+ * 배달 구역 API는 sessionStorage 스위치가 켜져 있으면 500을 반환합니다.
+ * 나머지 엔드포인트는 항상 정상 응답합니다.
+ */
+const ZONE_OUTAGE_KEY = 'step05:zone-outage';
+
+function isZoneOutage() {
+  return sessionStorage.getItem(ZONE_OUTAGE_KEY) === 'true';
+}
+
+const riderHandlers = [
+  http.get('/api/rider/me', async () => {
+    await delay(150);
+    return HttpResponse.json({ id: 7, name: '정라이더', vehicle: '전기자전거' });
+  }),
+
+  http.get('/api/rider/me/delivery-zones', async () => {
+    await delay(120);
+    if (isZoneOutage()) {
+      return HttpResponse.json(
+        { code: 'INTERNAL_ERROR', message: '구역 정보를 불러오지 못했어요.' },
+        { status: 500 },
+      );
+    }
+    return HttpResponse.json([
+      { code: 'seongsu', name: '성수' },
+      { code: 'mangwon', name: '망원' },
+      { code: 'nonhyeon', name: '논현' },
+    ]);
+  }),
+
+  http.get('/api/rider/me/settings', async () => {
+    await delay(120);
+    return HttpResponse.json({ pushEnabled: true, autoAccept: false });
+  }),
+
+  http.get('/api/rider/schedule-changes', async () => {
+    await delay(100);
+    return HttpResponse.json([{ id: 1, summary: '망원 저녁 피크 시간이 30분 앞당겨졌어요.' }]);
+  }),
+
+  http.get('/api/rider/notifications', async () => {
+    await delay(100);
+    return HttpResponse.json([{ id: 1, message: '이번 주 인센티브가 갱신됐어요.' }]);
+  }),
+
+  http.get('/api/rider/schedule-events', async () => {
+    await delay(100);
+    return HttpResponse.json([
+      { id: 1, startsAt: '18:00', label: '성수 피크' },
+      { id: 2, startsAt: '20:30', label: '망원 마감' },
+    ]);
+  }),
+];
+
 const mockUsers = [
   {
     id: 1,
@@ -167,6 +224,7 @@ const mockUsers = [
 
 export const handlers = [
   ...deliveryHandlers,
+  ...riderHandlers,
   http.post('/api/backoffice/login', async ({ request }) => {
     const { username, password } = (await request.json()) as { username: string; password: string };
 
