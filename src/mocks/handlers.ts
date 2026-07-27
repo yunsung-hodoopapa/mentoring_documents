@@ -150,10 +150,16 @@ const deliveryHandlers = [
  * 배달 구역 API는 sessionStorage 스위치가 켜져 있으면 500을 반환합니다.
  * 나머지 엔드포인트는 항상 정상 응답합니다.
  */
-const ZONE_OUTAGE_KEY = 'step05:zone-outage';
+function isOutage(target: 'zones' | 'settings') {
+  const key = target === 'zones' ? 'step05:zone-outage' : 'step05:settings-outage';
+  return sessionStorage.getItem(key) === 'true';
+}
 
-function isZoneOutage() {
-  return sessionStorage.getItem(ZONE_OUTAGE_KEY) === 'true';
+function internalError() {
+  return HttpResponse.json(
+    { code: 'INTERNAL_ERROR', message: '정보를 불러오지 못했어요.' },
+    { status: 500 },
+  );
 }
 
 const riderHandlers = [
@@ -164,11 +170,8 @@ const riderHandlers = [
 
   http.get('/api/rider/me/delivery-zones', async () => {
     await delay(120);
-    if (isZoneOutage()) {
-      return HttpResponse.json(
-        { code: 'INTERNAL_ERROR', message: '구역 정보를 불러오지 못했어요.' },
-        { status: 500 },
-      );
+    if (isOutage('zones')) {
+      return internalError();
     }
     return HttpResponse.json([
       { code: 'seongsu', name: '성수' },
@@ -179,6 +182,9 @@ const riderHandlers = [
 
   http.get('/api/rider/me/settings', async () => {
     await delay(120);
+    if (isOutage('settings')) {
+      return internalError();
+    }
     return HttpResponse.json({ pushEnabled: true, autoAccept: false });
   }),
 

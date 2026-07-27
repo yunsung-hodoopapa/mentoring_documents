@@ -1,20 +1,16 @@
 import { useReducer } from 'react';
 
 import { resetMountLog } from './lib/mountLog';
+import { isOutageEnabled, setOutageEnabled } from './lib/outage';
 import { resetRequestLog } from './lib/requestLog';
-import { isZoneOutageEnabled, setZoneOutageEnabled } from './lib/zoneOutage';
 
 /**
  * 실습 인프라 — 수정 대상이 아닙니다.
  */
 export function EntryDevToolbar() {
   const [, refresh] = useReducer((count: number) => count + 1, 0);
-  const outageEnabled = isZoneOutageEnabled();
-
-  const toggleOutage = () => {
-    setZoneOutageEnabled(!outageEnabled);
-    refresh();
-  };
+  const zoneOutage = isOutageEnabled('zones');
+  const settingsOutage = isOutageEnabled('settings');
 
   const resetCounters = () => {
     resetRequestLog();
@@ -25,8 +21,23 @@ export function EntryDevToolbar() {
   return (
     <div className="entry-dev-toolbar">
       <span className="entry-dev-toolbar-label">개발자 도구</span>
-      <button type="button" onClick={toggleOutage}>
-        구역 API 500: {outageEnabled ? '켜짐' : '꺼짐'}
+      <button
+        type="button"
+        onClick={() => {
+          setOutageEnabled('zones', !zoneOutage);
+          refresh();
+        }}
+      >
+        구역 API 500: {zoneOutage ? '켜짐' : '꺼짐'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setOutageEnabled('settings', !settingsOutage);
+          refresh();
+        }}
+      >
+        설정 API 500: {settingsOutage ? '켜짐' : '꺼짐'}
       </button>
       <button type="button" onClick={() => window.location.reload()}>
         새로고침

@@ -26,7 +26,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Test globals (vitest) */
+    "types": ["vitest/globals"]
   },
   "include": ["src", "documents/SimpleTodoGood.tsx", "documents/TodoList.tsx"]
 }
