@@ -20,7 +20,12 @@ export function useEntryStatus(): EntryStatus {
 
   // 실패 이력이 있으면 재요청 중이어도 Loading 으로 되돌리지 않습니다.
   // 되돌리면 스플래시로 내려가 홈이 언마운트되고, 재마운트가 다시 요청을 부릅니다.
-  if (zonesLoading && !hasLoadFailed(zonesQuery)) {
+  // 실패는 로딩이 아니라 그 자체로 하나의 상태입니다.
+  if (hasLoadFailed(zonesQuery) && !zones) {
+    return EntryStatus.ZonesUnavailable;
+  }
+
+  if (zonesLoading) {
     return EntryStatus.Loading;
   }
 

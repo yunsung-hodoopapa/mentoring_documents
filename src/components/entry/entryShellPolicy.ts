@@ -1,5 +1,6 @@
 export const EntryStatus = {
   Loading: 'loading',
+  ZonesUnavailable: 'zonesUnavailable',
   NoZones: 'noZones',
   Ready: 'ready',
 } as const;
@@ -8,6 +9,7 @@ export type EntryStatus = (typeof EntryStatus)[keyof typeof EntryStatus];
 
 export const ShellMode = {
   Splash: 'splash',
+  ZonesError: 'zonesError',
   Home: 'home',
 } as const;
 
@@ -19,8 +21,15 @@ export type ShellMode = (typeof ShellMode)[keyof typeof ShellMode];
  * 스플래시는 앱을 켜고 처음 한 번 보여주는 화면입니다. 홈을 이미 그린 뒤에는
  * 어떤 이유로 다시 로딩이 되더라도 스플래시로 되돌아가지 않습니다.
  * 되돌아가면 홈이 언마운트되고, 재마운트가 화면 쿼리를 전부 재발화시킵니다.
+ *
+ * 구역을 못 받은 것과 구역이 정말 없는 것은 다른 화면입니다.
+ * 전자는 서버 장애라 재시도를 줘야 하고, 후자는 신규 라이더라 안내를 줘야 합니다.
  */
 export function resolveShellMode(status: EntryStatus, hasRenderedHome: boolean): ShellMode {
+  if (status === EntryStatus.ZonesUnavailable) {
+    return ShellMode.ZonesError;
+  }
+
   if (status === EntryStatus.Loading && !hasRenderedHome) {
     return ShellMode.Splash;
   }
